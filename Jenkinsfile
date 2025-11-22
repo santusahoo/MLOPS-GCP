@@ -84,12 +84,17 @@ pipeline {
             gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"
             gcloud config set project "${GCP_PROJECT}"
 
+            // In your Jenkinsfile Deploy stage:
             gcloud run deploy "${SERVICE}" \
-              --image "${IMAGE}" \
-              --platform managed \
-              --region "${REGION}" \
-              --allow-unauthenticated \
-              --quiet
+            --image "${IMAGE}" \
+            --platform managed \
+            --region "${REGION}" \
+            --allow-unauthenticated \
+            --timeout 300 \
+            --startup-cpu-boost \
+            --cpu 2 \
+            --memory 2Gi \
+            --quiet
           '''
         }
       }

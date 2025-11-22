@@ -1,26 +1,30 @@
 FROM python:slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PORT=8080
 
 WORKDIR /app
 
-# OS deps
+# Install OS dependencies
 RUN apt-get update \
  && apt-get install -y --no-install-recommends libgomp1 \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
-# (A) If you have requirements.txt, prefer this:
-# COPY requirements.txt .
-# RUN pip install --no-cache-dir -r requirements.txt
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# (B) If you truly need editable install (pyproject/setup.py present), keep -e .
+# Copy application code
 COPY . .
-RUN pip install --no-cache-dir -e .
 
-# ❌ Don't train at build time
-# RUN python3 pipeline/training_pipeline.py
+# Install the package if needed
+RUN if [ -f setup.py ] || [ -f pyproject.toml ]; then \
+      pip install --no-cache-dir -e .; \
+    fi
 
 EXPOSE 8080
-CMD ["python3", "app.py"]
+
+# Use gunicorn for production (already in your requirements from mlflow)
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
