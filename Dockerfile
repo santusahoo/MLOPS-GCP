@@ -22,5 +22,5 @@ RUN pip install --no-cache-dir -e .
 # ❌ Don't train at build time
 # RUN python3 pipeline/training_pipeline.py
 
-EXPOSE 5000
+EXPOSE 8080
 CMD ["python3", "app.py"]
