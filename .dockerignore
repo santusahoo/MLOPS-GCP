@@ -1,0 +1,12 @@
+venv/
+.git/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.log
+.env
+data/
+artifacts/
+dist/
+build/
