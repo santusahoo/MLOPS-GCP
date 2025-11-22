@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/santusahoo/Documents/MLOPS-GCP-1/mlruns/0/8159f40f444c42b89c60987b89712f56/artifacts
+end_time: 1763810789479
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 8159f40f444c42b89c60987b89712f56
+run_name: upset-sloth-745
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1763810768381
+status: 4
+tags: []
+user_id: santusahoo

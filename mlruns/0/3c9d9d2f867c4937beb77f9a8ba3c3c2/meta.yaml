@@ -1,0 +1,14 @@
+artifact_uri: file:///Users/santusahoo/Documents/MLOPS-GCP-1/mlruns/0/3c9d9d2f867c4937beb77f9a8ba3c3c2/artifacts
+end_time: 1763810572715
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: 3c9d9d2f867c4937beb77f9a8ba3c3c2
+run_name: receptive-moth-661
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1763810551243
+status: 4
+tags: []
+user_id: santusahoo
