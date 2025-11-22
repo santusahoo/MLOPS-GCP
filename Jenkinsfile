@@ -2,9 +2,12 @@ pipeline {
   agent any
 
   environment {
-    VENV_DIR = 'venv'
+    VENV_DIR   = 'venv'
     GCP_PROJECT = 'wise-hub-478710-q8'
-    CLOUDSDK_CORE_DISABLE_PROMPTS = '1'   // avoid interactive prompts
+    REGION      = 'us-central1'
+    SERVICE     = 'mlops-gcp'
+    IMAGE       = "gcr.io/${GCP_PROJECT}/mlops-gcp:latest"
+    CLOUDSDK_CORE_DISABLE_PROMPTS = '1' // avoid interactive prompts
   }
 
   stages {
@@ -37,23 +40,35 @@ pipeline {
       }
     }
 
-    stage('Build & Push to GCR') {
+    stage('Buildx: Build & Push (amd64 + arm64)') {
       steps {
         withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
           sh '''
             set -eux
-            # Ensure gcloud exists (install it in your agent image or PATH). On Debian package it’s /usr/bin/gcloud.
             gcloud --version
 
+            # Auth to GCP + GCR
             gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"
             gcloud config set project "${GCP_PROJECT}"
-
-            # Configure Docker auth for GCR (scope only gcr.io)
             gcloud auth configure-docker gcr.io --quiet
 
-            IMAGE="gcr.io/${GCP_PROJECT}/mlops-gcp:latest"
-            docker build -t "${IMAGE}" .
-            docker push "${IMAGE}"
+            # Enable QEMU/binfmt so we can cross-build on this agent
+            # (Requires the Docker daemon to allow --privileged; if not, this will no-op harmlessly)
+            docker run --privileged --rm tonistiigi/binfmt --install all || true
+
+            # Create/use a buildx builder (idempotent)
+            docker buildx create --name xbuilder --use || docker buildx use xbuilder
+            docker buildx inspect --bootstrap
+
+            # Build a multi-arch image that includes linux/amd64 (required by Cloud Run) and linux/arm64
+            docker buildx build \
+              --platform linux/amd64,linux/arm64 \
+              -t "${IMAGE}" \
+              --push \
+              .
+
+            # Optional: verify platforms present on the pushed image
+            docker buildx imagetools inspect "${IMAGE}"
           '''
         }
       }
@@ -64,21 +79,26 @@ pipeline {
         withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
           sh '''
             set -eux
-            # Ensure gcloud exists (install it in your agent image or PATH). On Debian package it’s /usr/bin/gcloud.
             gcloud --version
 
             gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"
             gcloud config set project "${GCP_PROJECT}"
 
-            gcloud run deploy mlops-gcp \
-              --image gcr.io/${GCP_PROJECT}/mlops-gcp:latest \
+            gcloud run deploy "${SERVICE}" \
+              --image "${IMAGE}" \
               --platform managed \
-              --region us-central1 \
+              --region "${REGION}" \
               --allow-unauthenticated \
               --quiet
           '''
         }
       }
+    }
+  }
+
+  post {
+    always {
+      sh 'docker buildx rm xbuilder || true' // keep the agent clean
     }
   }
 }
