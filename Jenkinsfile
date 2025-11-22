@@ -3,24 +3,26 @@ pipeline {
 
   environment {
     VENV_DIR = 'venv'
+    GCP_PROJECT = 'wise-hub-478710-q8'
+    CLOUDSDK_CORE_DISABLE_PROMPTS = '1'   // avoid interactive prompts
   }
 
   stages {
-    stage('Cloning github repo to Jenkins workspace') {
+    stage('Checkout') {
       steps {
-        echo 'Cloning the repo'
         git branch: 'main',
             url: 'https://github.com/santusahoo/MLOPS-GCP.git',
             credentialsId: 'github-token'
       }
     }
 
-    stage('Setting up Python Virtual Environment and installing dependencies') {
+    stage('Python venv & deps') {
       steps {
-        echo 'Setting up Python Virtual Environment'
-        sh """
+        sh '''
+          set -eux
           python3 --version
-          pip3 --version || true
+          command -v pip3 || true
+          # On Debian images you may need: apt-get update && apt-get install -y python3-venv
           python3 -m venv ${VENV_DIR}
           . ${VENV_DIR}/bin/activate
           pip install --upgrade pip
@@ -29,9 +31,31 @@ pipeline {
           elif [ -f pyproject.toml ] || [ -f setup.py ]; then
             pip install -e .
           else
-            echo "No requirements.txt / setup.py / pyproject.toml found; skipping installs."
+            echo "No dependency files; skipping."
           fi
-        """
+        '''
+      }
+    }
+
+    stage('Build & Push to GCR') {
+      steps {
+        withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+          sh '''
+            set -eux
+            # Ensure gcloud exists (install it in your agent image or PATH). On Debian package it’s /usr/bin/gcloud.
+            gcloud --version
+
+            gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"
+            gcloud config set project "${GCP_PROJECT}"
+
+            # Configure Docker auth for GCR (scope only gcr.io)
+            gcloud auth configure-docker gcr.io --quiet
+
+            IMAGE="gcr.io/${GCP_PROJECT}/mlops-gcp:latest"
+            docker build -t "${IMAGE}" .
+            docker push "${IMAGE}"
+          '''
+        }
       }
     }
   }
