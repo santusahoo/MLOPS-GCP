@@ -58,5 +58,27 @@ pipeline {
         }
       }
     }
+
+    stage('Deploy to Google Cloud Run') {
+      steps {
+        withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+          sh '''
+            set -eux
+            # Ensure gcloud exists (install it in your agent image or PATH). On Debian package it’s /usr/bin/gcloud.
+            gcloud --version
+
+            gcloud auth activate-service-account --key-file="${GOOGLE_APPLICATION_CREDENTIALS}"
+            gcloud config set project "${GCP_PROJECT}"
+
+            gcloud run deploy mlops-gcp \
+              --image gcr.io/${GCP_PROJECT}/mlops-gcp:latest \
+              --platform managed \
+              --region us-central1 \
+              --allow-unauthenticated \
+              --quiet
+          '''
+        }
+      }
+    }
   }
 }
