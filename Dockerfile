@@ -26,4 +26,4 @@ RUN if [ -f setup.py ] || [ -f pyproject.toml ]; then \
 
 EXPOSE 8080
 
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 app:app
+CMD ["python3", "app.py"]
