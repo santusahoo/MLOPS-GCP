@@ -64,9 +64,9 @@ pipeline {
     }
 
     stage('Deploy to Google Cloud Run') {
-      steps {
+    steps {
         withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
-          sh '''
+        sh '''
             set -eux
             gcloud --version
 
@@ -74,18 +74,17 @@ pipeline {
             gcloud config set project "${GCP_PROJECT}"
 
             gcloud run deploy "${SERVICE}" \
-              --image "${IMAGE}" \
-              --platform managed \
-              --region "${REGION}" \
-              --allow-unauthenticated \
-              --timeout 300 \
-              --startup-cpu-boost \
-              --cpu 2 \
-              --memory 2Gi \
-              --quiet
-          '''
+            --image "${IMAGE}" \
+            --platform managed \
+            --region "${REGION}" \
+            --allow-unauthenticated \
+            --timeout 300 \
+            --cpu 2 \
+            --memory 2Gi \
+            --quiet
+        '''
         }
-      }
+    }
     }
   }
 
