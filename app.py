@@ -7,13 +7,6 @@ app = Flask(__name__)
 
 loaded_model = joblib.load(MODEL_DIR)
 
-@app.route('/')
-def root():
-    return jsonify({
-        'status': 'running',
-        'service': 'mlops-gcp'
-    })
-
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy'}), 200
